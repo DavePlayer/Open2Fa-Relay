@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = axum::Router::new()
         .route(
             "/",
-            get(move || async move {
+            get(|| async move {
                 tracing::info!("Received HTTP request");
 
                 // Emit a message to connected clients via SocketIo
