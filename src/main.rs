@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{middleware::AddExtension, routing::get, Json};
+use axum::routing::get;
 use socketioxide::SocketIo;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
@@ -22,18 +22,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = axum::Router::new()
         .route(
             "/",
-            get({
-                let io_arc = io_arc.clone(); // Clone the Arc to move it into the closure
-                move || async move {
-                    tracing::info!("Received HTTP request");
+            get(move || async move {
+                tracing::info!("Received HTTP request");
 
-                    // Emit a message to connected clients via SocketIo
-                    let io = io_arc.clone();
-                    let _ = io.emit("message", "HTTP Request message");
+                // Emit a message to connected clients via SocketIo
+                let io = io_arc.clone();
+                let _ = io.emit("message", "HTTP Request message");
 
-                    // Return the HTTP response
-                    "Hello. Yes I work"
-                }
+                // Return the HTTP response
+                "Hello. Yes I work"
             }),
         )
         .layer(
