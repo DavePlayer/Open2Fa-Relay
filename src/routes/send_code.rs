@@ -16,10 +16,10 @@ pub async fn handle_send_code_route(
     State(io): State<Arc<SocketIo>>,
     extract::Json(body): extract::Json<BodyJson>,
 ) -> &'static str {
-    info!("testing websocket emit");
+    info!("sending code through websocket");
     let _ = io
         .within(body.room_id)
-        .emit("message", &format!("sending code: {}", body.code));
+        .emit("sendCode", &format!("{}", body.code));
 
     "Message Emited"
 }

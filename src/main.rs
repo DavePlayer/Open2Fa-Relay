@@ -31,7 +31,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/", get(handle_test_socket_emit_route))
         .route("/sendCode", post(handle_send_code_route));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:9999").await?;
     axum::serve(listener, axum::Router::with_state(app, io_arc)).await?;
 
     Ok(())
