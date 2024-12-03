@@ -1,13 +1,12 @@
 use socketioxide::extract::{Data, SocketRef};
 use tracing::info;
 
-use crate::models::message_in::MessageIn;
+use crate::models::message_in::Message;
 
-pub fn handler(_socket: SocketRef, data: Data<MessageIn>) {
+pub fn handler(socket: SocketRef, Data(data): Data<Message>) {
     // Extract the inner data and log it
-    let inner_data = data.0;
-    info!("Handler triggered with raw data: {:?}", inner_data);
+    info!("Received message: {:?}", data);
 
-    // Additional logic here if needed
-    info!("Received message: {:?}", inner_data);
+    // let _ = socket.within(socket.id).emit("message", &data.text);
+    let _ = socket.emit("message", &data.text);
 }

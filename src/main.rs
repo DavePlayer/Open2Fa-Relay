@@ -1,12 +1,14 @@
 use std::sync::Arc;
 
-use axum::routing::get;
+use axum::routing::{get, post};
+use routes::{send_code::handle_send_code_route, test_socket_emit::handle_test_socket_emit_route};
 use socketioxide::SocketIo;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::FmtSubscriber;
 
 pub mod models;
+pub mod routes;
 pub mod sock_io;
 
 #[tokio::main]
@@ -20,27 +22,67 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let io_arc = Arc::new(io);
 
     let app = axum::Router::new()
-        .route(
-            "/",
-            get(|| async move {
-                tracing::info!("Received HTTP request");
-
-                // Emit a message to connected clients via SocketIo
-                let io = io_arc.clone();
-                let _ = io.emit("message", "HTTP Request message");
-
-                // Return the HTTP response
-                "Hello. Yes I work"
-            }),
-        )
         .layer(
             ServiceBuilder::new()
                 .layer(CorsLayer::permissive())
+                // .layer(axum::middleware::from_fn(jwt_verify_middleware))
                 .layer(layer),
-        );
+        )
+        .route("/", get(handle_test_socket_emit_route))
+        .route("/sendCode", post(handle_send_code_route));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
-    axum::serve(listener, app).await?;
+    axum::serve(listener, axum::Router::with_state(app, io_arc)).await?;
 
     Ok(())
 }
+
+// if JWT verification would be important in the future
+// NEED TO INSTALL JSONWEBTOKEN PACKAGE
+// async fn jwt_verify_middleware(
+//     req: axum::http::Request<Body>,
+//     next: axum::middleware::Next,
+// ) -> impl IntoResponse {
+//     // Extract headers
+//     let headers = req.headers().clone();
+//     let authorization = headers.get("Authorization").cloned();
+//     dotenv::dotenv().ok();
+
+//     // You can pass this data to your socket.io logic
+//     if let Some(auth) = authorization {
+//         let (token_type, token) = auth
+//             .to_str()
+//             .unwrap_or("")
+//             .split_once(' ')
+//             .unwrap_or(("", ""));
+
+//         if token_type == "bearer" {
+//             println!("got a token: {}", token);
+//             let secret_str = std::env::var("JWTSECRET").unwrap_or(String::from(""));
+//             info!("secret string: {}", secret_str);
+//             match decode::<serde_json::Value>(
+//                 token,
+//                 &DecodingKey::from_secret(secret_str.as_ref()),
+//                 &Validation::default(),
+//             ) {
+//                 Ok(claims) => {
+//                     info!("claims: {:?}", claims);
+//                 }
+//                 Err(err) => {
+//                     error!("Err: {:?}", err);
+//                     return (
+//                         StatusCode::FORBIDDEN,
+//                         "token decoding failed. invalid token",
+//                     )
+//                         .into_response();
+//                 }
+//             }
+//         } else {
+//             return (StatusCode::BAD_REQUEST, "invalid header type").into_response();
+//         }
+//     } else {
+//         return (StatusCode::BAD_REQUEST, "No Authentication header provided").into_response();
+//     }
+
+//     next.run(req).await
+// }
