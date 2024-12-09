@@ -11,7 +11,7 @@ tracing-subscriber = "0.3.19"
 axum = "0.7.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tower = "0.5.1"
+tower = { version = "0.5.1", features = ["full"] }
 tower-http = { version = "0.6.2", features = ["cors"] }
 anyhow = "1.0"
 # jsonwebtoken = "9"

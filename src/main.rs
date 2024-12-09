@@ -1,9 +1,15 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
-use axum::routing::{get, post};
+use axum::{
+    error_handling::HandleErrorLayer,
+    extract::Request,
+    http,
+    routing::{get, post},
+    BoxError,
+};
 use routes::{send_code::handle_send_code_route, test_socket_emit::handle_test_socket_emit_route};
 use socketioxide::SocketIo;
-use tower::ServiceBuilder;
+use tower::{buffer::BufferLayer, limit::RateLimitLayer, ServiceBuilder};
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::FmtSubscriber;
 
@@ -11,10 +17,18 @@ pub mod models;
 pub mod routes;
 pub mod sock_io;
 
+// async fn rate_limit_error_handler(_err: BoxError) -> (http::StatusCode, String) {
+//     (
+//         http::StatusCode::TOO_MANY_REQUESTS,
+//         "Rate limit exceeded".to_string(),
+//     )
+// }
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // set default tracing formating from FmtSubscriber library
     tracing::subscriber::set_global_default(FmtSubscriber::default())?;
+    // 5 requests per every 30 seconds:
 
     let (layer, io) = SocketIo::new_layer();
 
@@ -28,8 +42,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // .layer(axum::middleware::from_fn(jwt_verify_middleware))
                 .layer(layer),
         )
-        .route("/", get(handle_test_socket_emit_route))
-        .route("/sendCode", post(handle_send_code_route));
+        .route(
+            "/sendCode",
+            post(handle_send_code_route), // .layer(
+                                          //     ServiceBuilder::new()
+                                          //         .layer(HandleErrorLayer::new(rate_limit_error_handler))
+                                          //         .layer(BufferLayer::<Request>::new(1))
+                                          //         .layer(RateLimitLayer::new(1, Duration::from_secs(5))),
+                                          // ),
+        )
+        .route("/", get(handle_test_socket_emit_route));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:9999").await?;
     axum::serve(listener, axum::Router::with_state(app, io_arc)).await?;
